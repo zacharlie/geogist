@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/buefy/dist/buefy.min.css">
+  <!-- https://wikiki.github.io/elements/pageloader/ -->
+  <link rel="stylesheet" href="bulma-pageloader.min.css">
+  <title>GeoGist [Alpha]</title>
+  <link rel="stylesheet" href="https://cdn.materialdesignicons.com/5.3.45/css/materialdesignicons.min.css">
+  <!-- <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.2.0/css/all.css"> -->
+  <!-- ClipboardJS -->
+  <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.6/dist/clipboard.min.js"></script>
+  <style>
+  body a {
+    color: #000000
+  }
+  .captilized {
+    text-transform: capitalize;
+  }
+  .btn, .clipboard-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+  }
+  .btn .process-btn {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+  }
+  .code-snippet {
+    margin-top: 20px;
+    border-radius: 6px !important;
+    width: 100%;
+  }
+  .warning-notice {
+    color: #770000;
+    font-size: 0.8em;
+    text-align: center;
+  }
+  .collapse-content {
+    padding: 20px
+  }
+  </style>
+
+</head>
+
+<!-- Architecture comments
+This uses vue and buefy in an atypical manner, in more of an "vanilla" html structure that is straight forward.
+Traditionally these frameworks will use a build platform with node.js rather than client side cdn scripts.
+This was done to facilitate collaboration and lower the barrier for entry for other developers in the
+QGIS community whom might unfamiliar with node.js and javascript framework/ build tools etc.
+-->
+
+<body>
+<div id="pageloader" class="pageloader is-active"style="background-color: #4a4a4a"><span class="title">Loading</span></div>
+  <div class="container">
+    <div id="app">
+      <section>
+        <b-navbar centered fixed-top type="is-dark">
+          <template slot="start">
+            <b-navbar-item @click="location.reload(); ">GeoGist - Alpha</b-navbar-item>
+          </template>
+          <template slot="end">
+            <b-navbar-item @click="info">
+                <b-icon icon="information"></b-icon>
+            </b-navbar-item>
+            <b-navbar-item @click="window.open('https://github.com/zacharlie/geogist')">
+                <b-icon icon="github"></b-icon>
+            </b-navbar-item>
+            <b-navbar-item @click="notify">
+                <b-icon icon="lightbulb-on"></b-icon>
+            </b-navbar-item>
+          </template>
+        </b-navbar>
+      </section>
+      <section style="margin-top: 20px">
+        <div class="tile is-ancestor">
+          <div class="tile is-half is-vertical is-parent">
+            <div id="language-tile" class="tile is-child box">
+              <b-collapse :open="true" aria-id="language-collapsible-section">
+              <a class="collapse-title"
+                slot="trigger"
+                aria-controls="language-collapsible-section">
+                <b-icon
+                  icon="shape-plus"
+                  type="is-dark">
+                </b-icon>
+                <span class="title is-4"> Language</span></a>
+                <div class="collapse-content">
+                  <b-field label="Script Header">
+                    <b-input v-model="scriptheader" type="textarea"  rows="2"></b-input>
+                  </b-field>
+                  <b-field label="Comment Prefix">
+                    <b-input v-model="commentPrefix"></b-input>
+                  </b-field>
+                  <b-field label="Comment Suffix">
+                    <b-input v-model="commentSuffix"></b-input>
+                  </b-field>
+                </div>
+              </b-collapse>
+            </div>
+          <div id="tag-tile" class="tile is-child box">
+              <b-collapse :open="true" aria-id="tag-collapsible-section">
+              <a class="collapse-title"
+                slot="trigger"
+                aria-controls="tag-collapsible-section">
+                <b-icon
+                  icon="tag"
+                  type="is-dark">
+                </b-icon>
+                <span class="title is-4"> Tags</span></a>
+                <div class="collapse-content">
+                  <div class="tile is-child">
+                    <div class="tile is-parent">
+                      <div class="tile is-child is-horizontal">
+                        <ul class="captilized">
+                          <li v-for="tag in primarytags">
+                            <b-checkbox
+                            type="is-dark"
+                            v-model="selected"
+                            :native-value="tag"
+                            :disabled="selected.length > 15 && selected.indexOf(tag) === -1"
+                            >{{ tag.replace("-", " ") }}</b-checkbox>
+                          </li>
+                        </ul>
+                      </div>
+                      <div class="tile is-child is-horizontal">
+                        <ul class="captilized">
+                          <li v-for="tag in secondarytags">
+                            <b-checkbox
+                            type="is-dark"
+                            v-model="selected"
+                            :native-value="tag"
+                            :disabled="selected.length > 15 && selected.indexOf(tag) === -1"
+                            >{{ tag.replace("-", " ") }}</b-checkbox>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </b-collapse>
+            </div>
+            <div id="template-tile" class="tile is-child box">
+              <b-collapse :open="false" aria-id="template-collapsible-section">
+              <a class="collapse-title"
+                slot="trigger"
+                aria-controls="template-collapsible-section">
+                <b-icon
+                  icon="shape-plus"
+                  type="is-dark">
+                </b-icon>
+                <span class="title is-4"> Template</span></a>
+                <div class="collapse-content">
+                  <b-field label="Script Content" message="Add some custom content or modify the boilerplate methods">
+                    <b-input v-model="boilerplate" type="textarea"  rows="10"></b-input>
+                  </b-field>
+                  <b-field label="Inclusions" message="A space separated list of additional tags to add to the script">
+                    <b-input v-model="inclusions" type="textarea" rows="1"></b-input>
+                  </b-field>
+                  <b-field label="Author">
+                    <b-input v-model="author"></b-input>
+                  </b-field>
+                  <b-field label="Version">
+                    <b-input v-model="scriptversion"></b-input>
+                  </b-field>
+                  <b-field label="License">
+                    <b-input v-model="license"></b-input>
+                  </b-field>
+                </div>
+              </b-collapse>
+            </div>
+            <div id="search-tile" class="tile is-child box">
+              <b-collapse :open="false" aria-id="search-collapsible-section">
+                <a class="collapse-title"
+                  slot="trigger"
+                  aria-controls="search-collapsible-section">
+                  <b-icon
+                    icon="magnify-plus"
+                    type="is-dark">
+                  </b-icon>
+                  <span class="title is-4"> Search</span></a>
+                  <div class="collapse-content">
+                    <p><i>Search GitHub for shared gists that match your criteria using the following elements and paterns:</i></p><br>
+                    </b-field>
+                    <b-field label="Inclusions" message="A space separated list of additional tags to search for">
+                      <b-input v-model="inclusions" type="textarea" rows="1"></b-input>
+                    </b-field>
+                    <b-field label="Additions" message="A space separated list of tags to search for using the AND operator">
+                      <b-input v-model="additions" type="textarea" rows="1"></b-input>
+                    </b-field>
+                    <b-field label="Alternatives" message="A space separated list of tags to search for using the OR operator">
+                      <b-input v-model="alternatives" type="textarea" rows="1"></b-input>
+                    </b-field>
+                    <b-field label="Exclusions" message="A space separated list of tags to search for using the NOT operator">
+                      <b-input v-model="exclusions" type="textarea" rows="1"></b-input>
+                    </b-field>
+                    <div style="position: relative">
+                      <a class="btn process-btn" id="search-btn" @click="search">
+                        <b-button size="is-small"
+                          type="is-dark"
+                          icon-left="magnify">
+                          Search
+                        </b-button>
+                      </a>
+                    </div>
+                  </div>
+                </b-collapse>
+            </div>
+          </div>
+          <div class="tile is-parent">
+            <div id="code-window" class="tile is-half is-child box">
+              <p class="title is-4">Results</p>
+              <div class="code-snippet" style="position: relative">
+                <a class="clipboard-btn" id="clipboard-btn" data-clipboard-target=".template-code" @click="clipboard">
+                  <b-button size="is-small"
+                    type="is-light"
+                    icon-left="clipboard-text">
+                    Copy
+                  </b-button>
+                </a>
+                <pre><code class="template-code python" id="template-code">{{ scriptheader }}<span v-for="tag in maintags">
+{{ commentPrefix }}{{ tag.replace(" ", "-") }}{{ commentSuffix }}</span>
+<span v-for="tag in selected">
+{{ commentPrefix }}gis_{{ tag.replace(" ", "-") }}{{ commentSuffix }}</span>
+<span v-if="inclusionsArray"><span v-for="tag in inclusionsArray">{{ commentPrefix }}gis_{{ tag.replace(" ", "-") }}{{ commentSuffix }}
+</span></span>
+{{ commentPrefix }}Author: {{ author }}{{ commentSuffix }}
+{{ commentPrefix }}Version: {{ scriptversion }}{{ commentSuffix }}
+{{ commentPrefix }}License: {{ license }}{{ commentSuffix }}
+
+{{ boilerplate }}
+</code></pre>
+
+              </div>
+              <p style="padding: 10px"></p>
+              <div class="gist-link" style="position: relative">
+                <a class="btn process-btn" id="gist-btn" @click="window.open('https://gist.github.com')">
+                  <b-button size="is-medium"
+                    type="is-dark"
+                    icon-left="github">
+                    GIST.GITHUB.COM
+                  </b-button>
+                </a>
+              </div>
+              <p style="padding: 20px"></p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+<!-- Buefy AND Vue2 -->
+<script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+<script src="https://unpkg.com/buefy/dist/buefy.min.js"></script>
+
+  <script>
+    var app = new Vue({
+      el: '#app',
+      mounted: function () {
+        setTimeout(function(){ 
+          document.getElementById("pageloader").classList.remove("is-active")
+        }, 1000)
+        console.log('V-DOM ready')
+      },
+      computed: {
+        inclusionsArray () {
+          if (this.inclusions) {
+            arr = this.inclusions.split(" ")
+          } else {
+            arr = null
+          }
+          return arr
+        }
+      },
+      methods: {
+        clipboard: function() {
+          var clipboard = new ClipboardJS('.clipboard-btn')
+          clipboard.on('success',function(e){e.clearSelection()})
+          clipboard.on('success',this.clipboardSuccess())
+          //clipboard.on('error',function(e){e.clearSelection()})
+          //clipboard.on('error',this.error())
+        },
+        notify() {
+          msg = this.msgs[Math.floor(Math.random() * this.msgs.length)]
+          this.$buefy.toast.open({
+            message: msg,
+            position: 'is-bottom',
+            type: 'is-info'})
+        },
+        clipboardSuccess() {
+          this.$buefy.toast.open({
+            duration: 2000,
+            message: '&#128203; Snippet Copied',
+            position: 'is-bottom',
+            type: 'is-success'
+          })},
+        error() {
+          this.$buefy.toast.open({
+            duration: 5000,
+            message: 'Task failed successfully &#128163;',
+            position: 'is-bottom',
+            type: 'is-danger'
+          })
+        },
+        toggle() {
+          this.$buefy.toast.open({
+            duration: 5000,
+            message: 'Window expansion not yet supported',
+            position: 'is-bottom',
+            type: 'is-dark'
+          })
+        },
+        search() {
+          console.log('search triggered')
+          searchuri = "https://gist.github.com/search?q="
+          var searchstring = ''
+          var defaulttags = this.maintags.join('+')
+          searchstring += defaulttags
+          var searchtags = this.selected.join('+gis_')
+          searchstring += '+' + searchtags
+          searchuri += searchstring
+          if (this.inclusions.length > 0) {
+            searchuri += '+' + this.inclusions.replace(" ","+")
+          }
+          if (this.additions.length > 0) {
+            searchuri += ' AND ' + this.additions.replace(" ","+")
+          }
+          if (this.alternatives.length > 0) {
+            searchuri += ' OR ' + this.alternatives.replace(" ","+")
+          }
+          if (this.exclusions.length > 0) {
+            searchuri += ' NOT ' + this.exclusions.replace(" ","+")
+          }
+          if (searchuri.length > 256) {
+            searchuri = searchuri.substring(0,256)
+            this.error()
+            setTimeout(function(){ 
+              window.open(searchuri)
+            }, 1000)
+          } else {
+            window.open(searchuri)
+          }
+          console.log(searchuri)
+        },
+        info() {
+          this.$buefy.dialog.alert({
+            title: 'Information',
+            type: 'is-dark',
+            message: `GeoGist is currently in an alpha stage 
+and is still awaiting the upstream PyQgis to mature a whole lot.
+<br>
+<br>
+Currently it is just a simple platform to allow users to share snippets 
+relating to spatial operations and platforms, including spatial sql, 
+python scripts or even some example OGC server queries.
+<br>
+<br>
+More information is available on the <a href="https://github.com/zacharlie/pyqgist">PyQgist</a> project repo.`
+          })
+        }
+      },
+      data: {
+        scriptheader: '',
+        commentPrefix: '## ',
+        commentSuffix: '',
+        languages: [
+          'python',
+          'sql'],
+        maintags: ['geogist', 'foss'],
+        inclusions: '',  // +
+        additions: '',  // AND
+        alternatives: '',  // OR
+        exclusions: '',  // NOT
+        author: 'GeoGist Community',
+        scriptversion: '0.1.0',
+        license: 'MIT',
+        boilerplate: 'def function(var):\n  pass',
+        primarytags: [
+          'general',
+          'gis',
+          'proprietary',
+          'foss',
+          'sql',
+          'vector',
+          'raster',
+          'mesh',
+          'temporal',
+          'server',
+          'web',
+          'OGC'],
+        secondarytags: [
+          'qgis',
+          'postgis',
+          'esri',
+          'CAD',
+          'global-mapper',
+          'arcmap',
+          'pro',
+          'arcpy',
+          'OGC'],
+        selected: ['general'],  // selected tags
+        msgs: [
+          'GIS FTW',
+          '&#128640; Ready to launch',
+          '&#128374; awesomest-awesome',
+          '&#128222; Quick win incoming',
+          'You\'re Spatial! &#127775;',
+          'Never give up!',
+          'YOU CAN DO IT',
+          'Shiver me timbers! &#127988;&#8205;&#9760;&#65039;',
+          'Pancakes &#129374;']
+      }
+    })
+  </script>
+</body>
+</html>
