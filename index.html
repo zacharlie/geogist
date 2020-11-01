@@ -89,7 +89,7 @@ QGIS community whom might unfamiliar with node.js and javascript framework/ buil
                 <span class="title is-4"> Language</span></a>
                 <div class="collapse-content">
                   <b-field label="Script Header">
-                    <b-input v-model="scriptheader" type="textarea"  rows="2"></b-input>
+                    <b-input v-model="scriptheader" type="textarea"  rows="4"></b-input>
                   </b-field>
                   <b-field label="Comment Prefix">
                     <b-input v-model="commentPrefix"></b-input>
@@ -220,7 +220,8 @@ QGIS community whom might unfamiliar with node.js and javascript framework/ buil
                     Copy
                   </b-button>
                 </a>
-                <pre><code class="template-code python" id="template-code">{{ scriptheader }}<span v-for="tag in maintags">
+                <pre><code class="template-code python" id="template-code">{{ scriptheader }}
+<span v-for="tag in maintags">
 {{ commentPrefix }}{{ tag.replace(" ", "-") }}{{ commentSuffix }}</span>
 <span v-for="tag in selected">
 {{ commentPrefix }}gis_{{ tag.replace(" ", "-") }}{{ commentSuffix }}</span>
@@ -363,13 +364,16 @@ More information is available on the <a href="https://github.com/zacharlie/pyqgi
         }
       },
       data: {
-        scriptheader: '',
+        scriptheader: `#!/usr/bin/env python3
+"""Script Summary
+
+Additional documentation notes"""`,
         commentPrefix: '## ',
         commentSuffix: '',
         languages: [
           'python',
           'sql'],
-        maintags: ['geogist', 'foss'],
+        maintags: ['geogist','gis'],
         inclusions: '',  // +
         additions: '',  // AND
         alternatives: '',  // OR
@@ -380,7 +384,6 @@ More information is available on the <a href="https://github.com/zacharlie/pyqgi
         boilerplate: 'def function(var):\n  pass',
         primarytags: [
           'general',
-          'gis',
           'proprietary',
           'foss',
           'sql',
