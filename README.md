@@ -2,6 +2,10 @@
 
 Geospatial script template generator and content discovery framework.
 
+## [Go to the Geogist App](https://zacharlie.github.io/geogist/)
+
+## [Go to the PyQgist App](https://zacharlie.github.io/pyqgist/)
+
 ## ALPHA STATE
 
 This is still awaiting some maturation from the upstream pyqgist project and is just an alpha state prerelease.
