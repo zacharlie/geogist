@@ -2,7 +2,7 @@
 
 Geospatial script template generator and content discovery framework.
 
-## [Go to the Geogist App](https://zacharlie.github.io/geogist/)
+## [Go to the GeoGist App](https://zacharlie.github.io/geogist/)
 
 ## [Go to the PyQgist App](https://zacharlie.github.io/pyqgist/)
 
